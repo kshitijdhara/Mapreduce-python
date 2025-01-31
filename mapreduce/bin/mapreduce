@@ -1,0 +1,17 @@
+#!/bin.bash
+
+mkdir -p var/log
+rm -f var/log/manager.log var/log/worker-6002.log var/log/worker-6001.log
+mapreduce-manager --host localhost --port 6000 --logfile var/log/manager.log &
+sleep 2  # give the Manager time to start
+mapreduce-worker --host localhost --port 6001 --manager-host localhost --manager-port 6000 --logfile var/log/worker-6001.log &
+mapreduce-worker --host localhost --port 6002 --manager-host localhost --manager-port 6000 --logfile var/log/worker-6002.log &
+
+if pgrep -f mapreduce-manager &> /dev/null; then
+  echo "killing mapreduce manager ..."
+  pkill -f mapreduce-manager || true
+fi
+if pgrep -f mapreduce-worker &> /dev/null; then
+  echo "killing mapreduce worker ..."
+  pkill -f mapreduce-worker || true
+fi

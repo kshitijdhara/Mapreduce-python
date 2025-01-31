@@ -6,6 +6,9 @@ import json
 import time
 import click
 import mapreduce.utils
+import threading
+
+import mapreduce.utils.tcp_udp_server
 
 
 # Configure logging
@@ -22,21 +25,40 @@ class Manager:
             "Starting manager host=%s port=%s pwd=%s",
             host, port, os.getcwd(),
         )
+        self.port = port
+        self.host = host
+        self.alive = True
+        
+        self.udp_thread = threading.Thread(target=self.run_udp_server, daemon = True)
+        self.udp_thread.start()
+        
+        self.tcp_thread = threading.Thread(target=self.run_tcp_server, daemon=True)
+        self.tcp_thread.start()
 
-        # This is a fake message to demonstrate pretty printing with logging
-        message_dict = {
-            "message_type": "register",
-            "worker_host": "localhost",
-            "worker_port": 6001,
-        }
-        LOGGER.debug("TCP recv\n%s", json.dumps(message_dict, indent=2))
+        LOGGER.info("Manager node initialized and servers started.")
+        
+        self.udp_thread.join()
+        self.udp_thread.join()
+        LOGGER.info("Manager has shut down.")
 
         # TODO: you should remove this. This is just so the program doesn't
         # exit immediately!
-        LOGGER.debug("IMPLEMENT ME!")
-        time.sleep(120)
 
+    def run_udp_server(self):
+        try:
+            LOGGER.info(f"UDP server starting...")
+            mapreduce.utils.tcp_udp_server.udp_server(self.host, self.port, self.alive)
+            LOGGER.info(f"UDP server running on {self.host}:{self.port}")
+        except Exception as e:
+            LOGGER.error(f"UDP server error {e}")
 
+    def run_tcp_server(self):
+        try:
+            LOGGER.info(f"TCP server starting...")
+            mapreduce.utils.tcp_udp_server.tcp_server(self.host, self.port, self.alive)
+            LOGGER.info(f"TCP server running on {self.host}:{self.port}")
+        except Exception as e:
+            LOGGER.error(f"TCP server error {e}")
 @click.command()
 @click.option("--host", "host", default="localhost")
 @click.option("--port", "port", default=6000)
